@@ -1,0 +1,9 @@
+,missing,dtype
+pclass,1,float64
+survived,1,float64
+name,1,str
+sex,1,str
+age,264,float64
+sibsp,1,float64
+parch,1,float64
+embarked,3,str

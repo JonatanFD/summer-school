@@ -1,0 +1,4 @@
+analysis,target,MAE,RMSE,R2,CV_MAE
+Forecast hiring ratio,Relative AI hiring year-over-year ratio,2.4352,3.8819,0.9408,2.7859
+Predict talent concentration,AI talent concentration,0.0747,0.1017,0.9292,0.0799
+Predict talent representation,AI talent representation,0.5468,0.8068,0.9987,0.5726

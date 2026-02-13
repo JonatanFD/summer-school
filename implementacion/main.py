@@ -86,6 +86,15 @@ plt.tight_layout()
 plt.savefig('1_univariado_histogramas.png')
 plt.show()
 
+media_representacion_femenina = df_analysis[COL_REPRESENTACION_FEMENINA].mean()
+media_concentracion_femenina = df_analysis[COL_CONCENTRACION_FEMENINA].mean()
+media_contratacion = df_analysis[COL_CONTRATACION_RELATIVA].mean()
+print(
+    "Interpretación (Univariado): "
+    f"en promedio, la representación femenina en talento IA es {media_representacion_femenina:.2f}%, "
+    f"la concentración femenina es {media_concentracion_femenina:.2f}% y la contratación relativa interanual es {media_contratacion:.2f}%."
+)
+
 # ==========================================
 # 3. ESTADÍSTICA MULTIVARIADA (Clásica y Robusta)
 # ==========================================
@@ -119,6 +128,21 @@ plt.legend(bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0., title='Leyenda: a�
 plt.tight_layout()
 plt.savefig('3_scatter_rep_hiring.png')
 plt.show()
+
+corr_pearson_sin_diagonal = corr_pearson.where(~np.eye(corr_pearson.shape[0], dtype=bool))
+par_mayor_corr = corr_pearson_sin_diagonal.abs().stack().idxmax()
+valor_mayor_corr = corr_pearson.loc[par_mayor_corr[0], par_mayor_corr[1]]
+
+corr_rep_hiring_pearson, _ = pearsonr(df_analysis[COL_REPRESENTACION_FEMENINA], df_analysis[COL_CONTRATACION_RELATIVA])
+corr_rep_hiring_spearman, _ = spearmanr(df_analysis[COL_REPRESENTACION_FEMENINA], df_analysis[COL_CONTRATACION_RELATIVA])
+
+print(
+    "Interpretación (Multivariado): "
+    f"la relación lineal más fuerte observada es entre '{par_mayor_corr[0]}' y '{par_mayor_corr[1]}' "
+    f"(r de Pearson = {valor_mayor_corr:.2f}). "
+    f"Además, entre representación femenina y contratación relativa, r de Pearson = {corr_rep_hiring_pearson:.2f} "
+    f"y rho de Spearman = {corr_rep_hiring_spearman:.2f}."
+)
 
 # ==========================================
 # 4. REDUCCIÓN DE DIMENSIÓN: PCA
@@ -161,11 +185,20 @@ for i in range(n):
     plt.text(coeff[i,0]*3.5, coeff[i,1]*3.5, features[i], color='darkred', ha='center', va='center', weight='bold')
 
 plt.title(f'Biplot PCA: CP1 ({pca.explained_variance_ratio_[0]:.1%}) vs CP2 ({pca.explained_variance_ratio_[1]:.1%})')
-plt.xlabel('Componente principal 1')
-plt.ylabel('Componente principal 2')
+plt.xlabel('Madurez del Ecosistema (hacia la derecha: más talento y mayor concentración)')
+plt.ylabel('Calidad/Dinámica (hacia arriba: mayor diversidad o crecimiento rápido)')
 plt.grid(True)
 plt.savefig('5_pca_biplot.png')
 plt.show()
+
+varianza_acumulada_2 = pca.explained_variance_ratio_[:2].sum()
+indice_variable_mas_influyente = np.abs(pca.components_[0]).argmax()
+variable_mas_influyente = features[indice_variable_mas_influyente]
+print(
+    "Interpretación (PCA): "
+    f"las dos primeras componentes explican el {varianza_acumulada_2:.2%} de la variabilidad total, "
+    f"y la variable con mayor peso en la primera componente es '{variable_mas_influyente}'."
+)
 
 # ==========================================
 # 5. ANÁLISIS DE CORRESPONDENCIAS (Aproximación)
@@ -221,5 +254,17 @@ plt.ylabel('Dimensión 2')
 plt.legend(title='Tipo de categoría')
 plt.savefig('6_correspondence_analysis.png')
 plt.show()
+
+nivel_predominante = contingency_table.sum(axis=0).idxmax()
+total_nivel_predominante = int(contingency_table.sum(axis=0).max())
+pais_con_mas_crecimiento_alto = contingency_table['Crecimiento alto'].idxmax()
+casos_crecimiento_alto = int(contingency_table['Crecimiento alto'].max())
+
+print(
+    "Interpretación (Correspondencias): "
+    f"el nivel más frecuente es '{nivel_predominante}' con {total_nivel_predominante} registros, "
+    f"y el país con más observaciones en 'Crecimiento alto' es '{pais_con_mas_crecimiento_alto}' "
+    f"con {casos_crecimiento_alto} casos."
+)
 
 print("\nAnálisis completado. Gráficos guardados.")

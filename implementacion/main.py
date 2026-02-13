@@ -66,9 +66,13 @@ df_conc_pivot.columns = ['Year', 'Geographic area', COL_CONCENTRACION_FEMENINA, 
 df_merged = pd.merge(df_rep_pivot, df_conc_pivot, on=['Year', 'Geographic area'], how='outer')
 df_final = pd.merge(df_merged, df_hiring_agg, on=['Year', 'Geographic area'], how='outer')
 
-# Eliminar filas con nulos para el análisis multivariado
-df_analysis = df_final.dropna().copy()
-print(f"Datos listos. Dimensiones finales: {df_analysis.shape}")
+# Filtrar años recientes y eliminar filas con nulos para el análisis multivariado
+ANIO_MINIMO = 2020
+ANIO_MAXIMO = 2025
+df_reciente = df_final[(df_final['Year'] >= ANIO_MINIMO) & (df_final['Year'] <= ANIO_MAXIMO)].copy()
+df_analysis = df_reciente.dropna().copy()
+print(f"Datos listos ({ANIO_MINIMO}-{ANIO_MAXIMO}). Dimensiones finales: {df_analysis.shape}")
+print(f"Años presentes en el análisis: {sorted(df_analysis['Year'].unique().tolist())}")
 print(df_analysis.head())
 
 # ==========================================
@@ -86,13 +90,17 @@ plt.tight_layout()
 plt.savefig('1_univariado_histogramas.png')
 plt.show()
 
-media_representacion_femenina = df_analysis[COL_REPRESENTACION_FEMENINA].mean()
-media_concentracion_femenina = df_analysis[COL_CONCENTRACION_FEMENINA].mean()
-media_contratacion = df_analysis[COL_CONTRATACION_RELATIVA].mean()
+fila_max_rep = df_analysis.loc[df_analysis[COL_REPRESENTACION_FEMENINA].idxmax()]
+fila_max_hiring = df_analysis.loc[df_analysis[COL_CONTRATACION_RELATIVA].idxmax()]
 print(
-    "Interpretación (Univariado): "
-    f"en promedio, la representación femenina en talento IA es {media_representacion_femenina:.2f}%, "
-    f"la concentración femenina es {media_concentracion_femenina:.2f}% y la contratación relativa interanual es {media_contratacion:.2f}%."
+    "Resultado objetivo 1 (Gráfica 1): "
+    f"{fila_max_rep['Geographic area']} ({int(fila_max_rep['Year'])}) registra la mayor {COL_REPRESENTACION_FEMENINA.lower()} "
+    f"con {fila_max_rep[COL_REPRESENTACION_FEMENINA]:.2f}%."
+)
+print(
+    "Resultado objetivo 2 (Gráfica 1): "
+    f"{fila_max_hiring['Geographic area']} ({int(fila_max_hiring['Year'])}) presenta la mayor {COL_CONTRATACION_RELATIVA.lower()} "
+    f"con {fila_max_hiring[COL_CONTRATACION_RELATIVA]:.2f}%."
 )
 
 # ==========================================
@@ -110,6 +118,23 @@ sns.heatmap(corr_spearman, annot=True, cmap='coolwarm', ax=axes[1], vmin=-1, vma
 plt.tight_layout()
 plt.savefig('2_multivariado_correlacion.png')
 plt.show()
+
+corr_pearson_sin_diagonal = corr_pearson.where(~np.eye(corr_pearson.shape[0], dtype=bool))
+par_mayor_corr = corr_pearson_sin_diagonal.stack().idxmax()
+valor_mayor_corr = corr_pearson.loc[par_mayor_corr[0], par_mayor_corr[1]]
+par_menor_corr = corr_pearson_sin_diagonal.stack().idxmin()
+valor_menor_corr = corr_pearson.loc[par_menor_corr[0], par_menor_corr[1]]
+
+print(
+    "Resultado objetivo 1 (Gráfica 2): "
+    f"la correlación positiva más alta es entre '{par_mayor_corr[0]}' y '{par_mayor_corr[1]}' "
+    f"con r = {valor_mayor_corr:.2f}."
+)
+print(
+    "Resultado objetivo 2 (Gráfica 2): "
+    f"la correlación más baja es entre '{par_menor_corr[0]}' y '{par_menor_corr[1]}' "
+    f"con r = {valor_menor_corr:.2f}."
+)
 
 # Scatter Plot: Representación vs Hiring
 plt.figure(figsize=(8, 6))
@@ -129,19 +154,21 @@ plt.tight_layout()
 plt.savefig('3_scatter_rep_hiring.png')
 plt.show()
 
-corr_pearson_sin_diagonal = corr_pearson.where(~np.eye(corr_pearson.shape[0], dtype=bool))
-par_mayor_corr = corr_pearson_sin_diagonal.abs().stack().idxmax()
-valor_mayor_corr = corr_pearson.loc[par_mayor_corr[0], par_mayor_corr[1]]
-
-corr_rep_hiring_pearson, _ = pearsonr(df_analysis[COL_REPRESENTACION_FEMENINA], df_analysis[COL_CONTRATACION_RELATIVA])
-corr_rep_hiring_spearman, _ = spearmanr(df_analysis[COL_REPRESENTACION_FEMENINA], df_analysis[COL_CONTRATACION_RELATIVA])
+promedios_pais = df_analysis.groupby('Geographic area')[[COL_REPRESENTACION_FEMENINA, COL_CONTRATACION_RELATIVA]].mean()
+pais_mayor_rep = promedios_pais[COL_REPRESENTACION_FEMENINA].idxmax()
+valor_pais_mayor_rep = promedios_pais.loc[pais_mayor_rep, COL_REPRESENTACION_FEMENINA]
+pais_mayor_hiring = promedios_pais[COL_CONTRATACION_RELATIVA].idxmax()
+valor_pais_mayor_hiring = promedios_pais.loc[pais_mayor_hiring, COL_CONTRATACION_RELATIVA]
 
 print(
-    "Interpretación (Multivariado): "
-    f"la relación lineal más fuerte observada es entre '{par_mayor_corr[0]}' y '{par_mayor_corr[1]}' "
-    f"(r de Pearson = {valor_mayor_corr:.2f}). "
-    f"Además, entre representación femenina y contratación relativa, r de Pearson = {corr_rep_hiring_pearson:.2f} "
-    f"y rho de Spearman = {corr_rep_hiring_spearman:.2f}."
+    "Resultado objetivo 1 (Gráfica 3): "
+    f"el país con mayor promedio de {COL_REPRESENTACION_FEMENINA.lower()} es {pais_mayor_rep} "
+    f"con {valor_pais_mayor_rep:.2f}%."
+)
+print(
+    "Resultado objetivo 2 (Gráfica 3): "
+    f"el país con mayor promedio de {COL_CONTRATACION_RELATIVA.lower()} es {pais_mayor_hiring} "
+    f"con {valor_pais_mayor_hiring:.2f}%."
 )
 
 # ==========================================
@@ -172,6 +199,16 @@ plt.grid(True)
 plt.savefig('4_pca_scree_plot.png')
 plt.show()
 
+componentes_80 = int(np.argmax(pca.explained_variance_ratio_.cumsum() >= 0.80) + 1)
+print(
+    "Resultado objetivo 1 (Gráfica 4): "
+    f"la primera componente explica {pca.explained_variance_ratio_[0]:.2%} de la varianza."
+)
+print(
+    "Resultado objetivo 2 (Gráfica 4): "
+    f"se requieren {componentes_80} componentes para alcanzar al menos 80% de varianza acumulada."
+)
+
 # Biplot (PC1 vs PC2)
 plt.figure(figsize=(10, 8))
 # Puntos (Países/Años)
@@ -191,13 +228,20 @@ plt.grid(True)
 plt.savefig('5_pca_biplot.png')
 plt.show()
 
-varianza_acumulada_2 = pca.explained_variance_ratio_[:2].sum()
-indice_variable_mas_influyente = np.abs(pca.components_[0]).argmax()
-variable_mas_influyente = features[indice_variable_mas_influyente]
+pca_df['Geographic area'] = df_analysis['Geographic area'].values
+pc_promedio_por_pais = pca_df.groupby('Geographic area')[['PC1', 'PC2']].mean()
+pais_mas_derecha = pc_promedio_por_pais['PC1'].idxmax()
+valor_pc1_max = pc_promedio_por_pais.loc[pais_mas_derecha, 'PC1']
+pais_mas_arriba = pc_promedio_por_pais['PC2'].idxmax()
+valor_pc2_max = pc_promedio_por_pais.loc[pais_mas_arriba, 'PC2']
+
 print(
-    "Interpretación (PCA): "
-    f"las dos primeras componentes explican el {varianza_acumulada_2:.2%} de la variabilidad total, "
-    f"y la variable con mayor peso en la primera componente es '{variable_mas_influyente}'."
+    "Resultado objetivo 1 (Gráfica 5): "
+    f"el país más a la derecha (mayor madurez del ecosistema) es {pais_mas_derecha} con PC1 promedio = {valor_pc1_max:.2f}."
+)
+print(
+    "Resultado objetivo 2 (Gráfica 5): "
+    f"el país más arriba (mayor calidad/dinámica) es {pais_mas_arriba} con PC2 promedio = {valor_pc2_max:.2f}."
 )
 
 # ==========================================
@@ -261,10 +305,12 @@ pais_con_mas_crecimiento_alto = contingency_table['Crecimiento alto'].idxmax()
 casos_crecimiento_alto = int(contingency_table['Crecimiento alto'].max())
 
 print(
-    "Interpretación (Correspondencias): "
-    f"el nivel más frecuente es '{nivel_predominante}' con {total_nivel_predominante} registros, "
-    f"y el país con más observaciones en 'Crecimiento alto' es '{pais_con_mas_crecimiento_alto}' "
-    f"con {casos_crecimiento_alto} casos."
+    "Resultado objetivo 1 (Gráfica 6): "
+    f"el nivel de crecimiento más frecuente es '{nivel_predominante}' con {total_nivel_predominante} registros."
+)
+print(
+    "Resultado objetivo 2 (Gráfica 6): "
+    f"el país con más observaciones en 'Crecimiento alto' es '{pais_con_mas_crecimiento_alto}' con {casos_crecimiento_alto} casos."
 )
 
 print("\nAnálisis completado. Gráficos guardados.")

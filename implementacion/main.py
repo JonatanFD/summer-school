@@ -2,6 +2,7 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
+from pathlib import Path
 from sklearn.decomposition import PCA
 from sklearn.preprocessing import StandardScaler
 from scipy.stats import pearsonr, spearmanr
@@ -17,9 +18,10 @@ print("--- 1. Cargando y Limpiando Datos ---")
 
 # Cargar datasets
 # Asegúrate de que los nombres de archivo coincidan con los tuyos
-df_rep = pd.read_csv("fig_4.2.21.csv")  # AI Talent Representation
-df_conc = pd.read_csv("fig_4.2.19.csv") # AI Talent Concentration
-df_hiring = pd.read_csv("fig_4.2.14.csv") # Relative AI Hiring
+data_dir = Path(__file__).resolve().parent.parent / "4. Economy" / "Data"
+df_rep = pd.read_csv(data_dir / "fig_4.2.21.csv")  # AI Talent Representation
+df_conc = pd.read_csv(data_dir / "fig_4.2.19.csv") # AI Talent Concentration
+df_hiring = pd.read_csv(data_dir / "fig_4.2.14.csv") # Relative AI Hiring
 
 # Función auxiliar para limpiar porcentajes
 def clean_pct(x):
